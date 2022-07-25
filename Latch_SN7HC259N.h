@@ -76,12 +76,12 @@ class Latch_SN7HC259N
     }
 
   private:
-    const uint8_t a0_pin;
-    const uint8_t a1_pin;
-    const uint8_t a2_pin;
-    const uint8_t d_pin;
-    const uint8_t nLE_pin;
-    const uint8_t nMR_pin;
+    const uint8_t a0_pin;  //Arduino's pin ID that is connected to the Latch's A0 pin
+    const uint8_t a1_pin;  //Arduino's pin ID that is connected to the Latch's A1 pin
+    const uint8_t a2_pin;  //Arduino's pin ID that is connected to the Latch's A2 pin
+    const uint8_t d_pin;   //Arduino's pin ID that is connected to the Latch's D pin
+    const uint8_t nLE_pin; //Arduino's pin ID that is connected to the Latch's nLE pin
+    const uint8_t nMR_pin; //Arduino's pin ID that is connected to the Latch's nMR pin
 };
 
 #endif
