@@ -1,160 +1,120 @@
-class Latch_SN7HC259N
-{
-  public:
-    Latch_SN7HC259N(const uint8_t a0_pin, const uint8_t a1_pin, const uint8_t a2_pin, const uint8_t d_pin, const uint8_t nLE_pin, const uint8_t nMR_pin)
-      : a0_pin(a0_pin),
-        a1_pin(a1_pin),
-        a2_pin(a2_pin),
-        d_pin(d_pin),
-        nLE_pin(nLE_pin),
-        nMR_pin(nMR_pin) {
-      pinMode(a0_pin,  OUTPUT);
-      pinMode(a1_pin,  OUTPUT);
-      pinMode(a2_pin,  OUTPUT);
-      pinMode(d_pin,   OUTPUT);
-      pinMode(nLE_pin, OUTPUT);
-      pinMode(nMR_pin, OUTPUT);
-    }
-
-    void resetMode() {
-      digitalWrite(this->nMR_pin, LOW);
-      digitalWrite(this->nLE_pin, HIGH);
-    }
-
-    void demuxMode(const uint8_t d = LOW) {
-      digitalWrite(this->nMR_pin, LOW);
-      digitalWrite(this->nLE_pin, LOW);
-      digitalWrite(this->d_pin,   d);
-    }
-
-    void memoryMode() {
-      digitalWrite(this->nMR_pin, HIGH);
-      digitalWrite(this->nLE_pin, HIGH);
-    }
-
-    void addressableLatchMode() {
-      digitalWrite(this->nMR_pin, HIGH);
-      digitalWrite(this->nLE_pin, LOW);
-    }
-
-    //address from 0 to 7
-    void set(const uint8_t address, const uint8_t value) {
-      if (address > 7) return; //throw exception?
-      set(
-        bitRead(address, 0),
-        bitRead(address, 1),
-        bitRead(address, 2),
-        value
-      );
-    }
-
-    void set(const uint8_t a_0, const uint8_t a_1, const uint8_t a_2, uint8_t value) {
-      digitalWrite(this->nLE_pin, HIGH);
-      digitalWrite(this->a0_pin, a_0);
-      digitalWrite(this->a1_pin, a_1);
-      digitalWrite(this->a2_pin, a_2);
-      digitalWrite(this->nLE_pin, LOW);
-      digitalWrite(this->d_pin, value);
-      digitalWrite(this->nLE_pin, HIGH);
-    }
-
-    void set(const uint8_t value) {
-      for(uint8_t i = 0; i < 8; i++) {
-        digitalWrite(this->nLE_pin, HIGH);
-        digitalWrite(this->a0_pin, bitRead(i, 0));
-        digitalWrite(this->a1_pin, bitRead(i, 1));
-        digitalWrite(this->a2_pin, bitRead(i, 2));
-        digitalWrite(this->nLE_pin, LOW);
-        digitalWrite(this->d_pin, bitRead(value, i));
-      }
-      digitalWrite(this->nLE_pin, HIGH);
-    }
-
-  private:
-    const uint8_t a0_pin;
-    const uint8_t a1_pin;
-    const uint8_t a2_pin;
-    const uint8_t d_pin;
-    const uint8_t nLE_pin;
-    const uint8_t nMR_pin;
-};
-
-
+#include "Latch_SN7HC259N.h"
+#include "feature.h"
 
 const uint8_t A_0 = 0;
 const uint8_t A_1 = 1;
 const uint8_t A_2 = 2;
+const uint8_t D = 4;
+const uint8_t nLE = 5;
+const uint8_t nMR = 6;
 
-const uint8_t D = 3;
+const uint8_t SELECT_A_0 = 7;
+const uint8_t SELECT_A_1 = 8;
+const uint8_t SELECT_A_2 = 9; //nao precisa ser usado
+const uint8_t SELECT_D = 10;
+const uint8_t SELECT_nLE = 11;
+const uint8_t SELECT_nMR = 12;
 
-const uint8_t nLE = 12;
-const uint8_t nMR = 13;
+//Those are the pins that will take inputs from the spaceship buttons and levers.
+//Those should be the analog input pins properly configured to take binary (non analog) data.
+const uint8_t lever_weapons_pin = A5;
+const uint8_t lever_shield_pin = A4;
+const uint8_t lever_engine_pin = A3;
+const uint8_t lever_sensors_pin = A2;
+const uint8_t btn_laser_pin = A1;
+const uint8_t btn_torpedo_pin = A0;
 
-Latch_SN7HC259N l(A_0, A_1, A_2, D, nLE, nMR);
+//demultiplexador das entradas
+Latch_SN7HC259N selector(SELECT_A_0, SELECT_A_1, SELECT_A_2, SELECT_D, SELECT_nLE, SELECT_nMR);
+
+Latch_SN7HC259N l_weapon(A_0, A_1, A_2, D, nLE, nMR);
+Latch_SN7HC259N l_shield(A_0, A_1, A_2, D, nLE, nMR);
+Latch_SN7HC259N l_engine(A_0, A_1, A_2, D, nLE, nMR);
+Latch_SN7HC259N l_sensor(A_0, A_1, A_2, D, nLE, nMR);
+
+Feature weapons(1, 9, 3, 1, 1),
+        shield (1, 9, 0, 3, 1),
+        engine (1, 9, 0, 3, 3),
+        sensors(1, 9, 0, 1, 3);
+
+uint8_t torpedoes = 3;
+
+//Spaceship inputs
+boolean lever_weapons, lever_shield, lever_engine, lever_sensors,
+  btn_laser, btn_torpedo;
+
+unsigned long curr_time;
+unsigned long elapsed;
+unsigned long l_weapons_elapsed, l_shield_elapsed, l_engine_elapsed, l_sensors_elapsed;
+
+unsigned long const EVENT_LAPSE_DURATION = 10000; //10 seconds
+
+
 
 void setup() {
-  l.resetMode();
-  l.memoryMode();
+  pinMode(lever_weapons_pin, INPUT);
+  pinMode(lever_shield_pin, INPUT);
+  pinMode(lever_engine_pin, INPUT);
+  pinMode(lever_sensors_pin, INPUT);
+  pinMode(btn_laser, INPUT);
+  pinMode(btn_torpedo,  INPUT);
+
+  l_weapon.resetMode();
+  l_weapon.memoryMode();
+
+  l_shield.resetMode();
+  l_shield.memoryMode();
+
+  l_engine.resetMode();
+  l_engine.memoryMode();
+
+  l_sensor.resetMode();
+  l_sensor.memoryMode();
+
+  selector.resetMode();
+  selector.demuxMode();
+
+  elapsed = millis();
+
+  l_weapons_elapsed = millis();
+  lever_weapons = digitalRead(lever_weapons_pin);
 }
 
 void loop() {
-  l.set(0, HIGH);
-  l.set(7, HIGH);
-  delay(1000);
+  if (millis() - elapsed > EVENT_LAPSE_DURATION) {
+    elapsed = millis();
+  }
 
-  l.set(1, HIGH);
-  l.set(6, HIGH);
-  delay(1000);
 
-  l.set(2, HIGH);
-  l.set(5, HIGH);
-  delay(1000);
 
-  l.set(3, HIGH);
-  l.set(4, HIGH);
-  delay(1000);
+  //handle weapon switch
+  //if the lever changes value, we'll have to wait for it 
+  if ( lever_weapons != digitalRead(lever_weapons_pin) ) {
+    l_weapons_elapsed = millis();
+    lever_weapons = digitalRead(lever_weapons_pin);
+  }
 
-  l.set(0, LOW);
-  l.set(7, LOW);
-  delay(500);
+  //produce the weapons degradation or recovering
+  if ( millis() - l_weapons_elapsed > EVENT_LAPSE_DURATION ) {
+    if (lever_weapons) {
+      weapons.recover();
+    } else {
+      weapons.degrade();
+    }
+  }
 
-  l.set(1, LOW);
-  l.set(6, LOW);
-  delay(500);
 
-  l.set(2, LOW);
-  l.set(5, LOW);
-  delay(500);
+  //handle laser button push
+  if ( btn_laser ) {
+    if ( !digitalRead(btn_laser_pin) ) {
+      btn_laser = false;
+      //fire!
+    }
+  } else {
+    if ( digitalRead(btn_laser_pin) ) {
+      btn_laser = true;
+    }
+  }
 
-  l.set(3, LOW);
-  l.set(4, LOW);
-  delay(2000);
-
-  l.set(B10000001);
-  delay(1000);
-
-  l.set(B01000010);
-  delay(1000);
-
-  l.set(B00100100);
-  delay(1000);
-
-  l.set(B00011000);
-  delay(1000);
-
-  l.set(B00000000);
-  delay(500);
-
-  l.set(B11111111);
-  delay(500);
-
-  l.set(B00000000);
-  delay(500);
-
-  l.set(B11111111);
-  delay(500);
-
-  l.set(B00000000);
-  delay(2000);
 }
 
