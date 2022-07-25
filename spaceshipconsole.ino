@@ -33,15 +33,15 @@ Latch_SN7HC259N l_engine(A_0, A_1, A_2, D, nLE, nMR);
 Latch_SN7HC259N l_sensor(A_0, A_1, A_2, D, nLE, nMR);
 
 Feature weapons(1, 9, 3, 1, 1),
-        shield (1, 9, 0, 3, 1),
+        shield (1, 9, 6, 3, 1),
         engine (1, 9, 0, 3, 3),
         sensors(1, 9, 0, 1, 3);
 
 uint8_t torpedoes = 3;
 
 //Spaceship inputs
-boolean lever_weapons, lever_shield, lever_engine, lever_sensors,
-  btn_laser, btn_torpedo;
+boolean lever_weapons, lever_shield, lever_engine, lever_sensors, //stores the current state of the lever. true if it is on
+  btn_laser, btn_torpedo; //stores the current state of the button. true if it is pushed. lasers are fired after it is released
 
 unsigned long curr_time;
 unsigned long elapsed;
@@ -72,12 +72,18 @@ void setup() {
   l_sensor.memoryMode();
 
   selector.resetMode();
-  selector.demuxMode();
+  selector.demuxMode();//nope
 
   elapsed = millis();
 
   l_weapons_elapsed = millis();
+
   lever_weapons = digitalRead(lever_weapons_pin);
+  lever_shield  = digitalRead(lever_shield_pin);
+  lever_engine  = digitalRead(lever_engine_pin);
+  lever_sensors = digitalRead(lever_sensors_pin);
+  btn_laser     = digitalRead(btn_laser_pin);
+  btn_torpedo   = digitalRead(btn_torpedo_pin);
 }
 
 void loop() {
@@ -104,11 +110,16 @@ void loop() {
   }
 
 
+
   //handle laser button push
   if ( btn_laser ) {
     if ( !digitalRead(btn_laser_pin) ) {
       btn_laser = false;
-      //fire!
+      if ( weapons.use() ) {
+        //TODO fire laser
+      } else {
+        //TODO laser cannot be fired yet
+      }
     }
   } else {
     if ( digitalRead(btn_laser_pin) ) {
@@ -116,5 +127,8 @@ void loop() {
     }
   }
 
+
+  //update view
+  l_weapon.set( weapons.value()/3 - 1 ); //we will only use 3 outputs
 }
 
