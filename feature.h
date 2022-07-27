@@ -7,10 +7,11 @@ class Feature {
   public:
     Feature(uint8_t _min = 0, uint8_t _max = 10, uint8_t cost = 1, uint8_t degrade_rate = 1, uint8_t recover_rate = 1)
       : _min(_min), _max(_max), cost(cost), degrade_rate(degrade_rate), recover_rate(recover_rate), current(_max) {
+        current = _min;
     }
 
     boolean use() {
-      if (current < cost) {
+      if (current - _min < cost) {
         return false;
       }
 
@@ -19,7 +20,7 @@ class Feature {
     }
 
     void degrade() {
-      if (current < degrade_rate) {
+      if (current - _min < degrade_rate) {
         current = _min;
       } else {
         current -= degrade_rate;
@@ -36,12 +37,16 @@ class Feature {
       }
     }
 
-    float relative_value() const {
-      return ((float)current)/((float)_max);
-    }
-
     uint8_t value() const {
       return current;
+    }
+
+    uint8_t minimum() const {
+      return _min;
+    }
+
+    uint8_t maximum() const {
+      return _max;
     }
 
   private:
