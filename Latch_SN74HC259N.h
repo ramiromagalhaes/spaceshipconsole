@@ -1,12 +1,15 @@
-#ifndef __LATCH_SN7HC259N_H__
-#define __LATCH_SN7HC259N_H__
+#ifndef __LATCH_SN74HC259N_H__
+#define __LATCH_SN74HC259N_H__
 
 #include <Arduino.h>
 
-class Latch_SN7HC259N
+/**
+ * This is a simple class to control a 74HC259 latch from an Arduino board.
+ */
+class Latch_SN74HC259N
 {
   public:
-    Latch_SN7HC259N(const uint8_t a0_pin, const uint8_t a1_pin, const uint8_t a2_pin, const uint8_t d_pin, const uint8_t nLE_pin, const uint8_t nMR_pin)
+    Latch_SN74HC259N(const uint8_t a0_pin, const uint8_t a1_pin, const uint8_t a2_pin, const uint8_t d_pin, const uint8_t nLE_pin, const uint8_t nMR_pin)
       : a0_pin(a0_pin),
         a1_pin(a1_pin),
         a2_pin(a2_pin),
